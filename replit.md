@@ -1,6 +1,6 @@
-# [Project name]
+# Progetto Python
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Progetto Python vuoto pronto all'uso con Python 3.12, pip e workflow configurato.
 
 ## Run & Operate
 
