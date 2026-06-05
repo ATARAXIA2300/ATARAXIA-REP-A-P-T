@@ -48,5 +48,5 @@ localPort = 8081
 externalPort = 80
 
 [nix]
-packages = ["john", "nmap_graphical"]
+packages = ["john", "nmap_graphical", "wp-cli"]
 channel = "stable-25_05"
