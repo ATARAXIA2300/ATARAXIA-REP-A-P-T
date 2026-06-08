@@ -20,3 +20,4 @@ backup
 test
 sso
 auth
+vps
