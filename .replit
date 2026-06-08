@@ -47,5 +47,5 @@ localPort = 8081
 externalPort = 80
 
 [nix]
-packages = ["john", "nmap_graphical", "wp-cli", "tshark", "netcat-openbsd"]
+packages = ["john", "nmap_graphical", "wp-cli", "tshark", "netcat-openbsd", "dirb", "gobuster", "dig", "nmap"]
 channel = "stable-25_05"
