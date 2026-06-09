@@ -81,7 +81,6 @@ elif args.information and args.URL:
      print(f"\nStarting information gathering on {url}...")
      time.sleep(2)
      regex_emails = r"(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?![A-Za-z0-9.-])"
-     regex_links = r"https?://[^\s\"'<>]+"
      regex_html_title = r"<title>(.*?)</title>"
      headers = {
          "User-Agent": user_agent,
@@ -91,13 +90,14 @@ elif args.information and args.URL:
      options_resp = requests.options(url, headers=headers, allow_redirects=True, timeout=10)
      print(f"\nHTTP Methods: {options_resp.headers.get('Allow')}")
      response = requests.get(url, headers=headers, allow_redirects=True, timeout=10)
+     redirects = [response.url for response in response.history]
+     final_url = response.url
      w = whois.whois(url)
      print(f"\nWHOIS: {w}")
      print(f"\nServer: {response.headers.get('Server')}")
      print(f"\nX-Powered-By: {response.headers.get('X-Powered-By')}")
      print(f"\nSet-Cookie: {response.headers.get('Set-Cookie')}")
      print(f"\nEmails: {re.findall(regex_emails, response.text)}")
-     print(f"\nLinks: {re.findall(regex_links, response.text)}")
      print(f"\nTitle: {re.findall(regex_html_title, response.text)}")
      print(f"\nStatus Code: {response.status_code}")
      print(f"\nWebsite Headers: {response.headers}")
@@ -105,6 +105,7 @@ elif args.information and args.URL:
      print(f"\nEncoding: {response.encoding}")
      print(f"\nHTTP Version: {response.raw.version}")
      print(f"\nHTTP Reason: {response.status_code} {response.reason}")
+     print(f"\nRedirects: {redirects} --> Final URL: {final_url}")
      if "<!DOCTYPE html>" in response.text:
          print("\nThe target is using HTML5")
      elif """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" ...>""" in response.text:
@@ -116,12 +117,25 @@ elif args.information and args.URL:
          print("\nThe target is using HTML 4.01 Transitional (Today is deprecated)")
      else:
          print("\nI couldn't detect the html version of the target.")
+
+     scoring = 0
      
      if "wp-content" in response.text or "wp-admin" in response.text:
-         print("\nThe target is using WordPress!")
+         scoring += 0.7
+         response = requests.get(url + "/wp-login.php", headers=headers, allow_redirects=True, timeout=10)
+         if response.status_code in (200, 403, 401):
+         scoring += 1
+         print(f"\nThe target has a WordPress login page! | URL: {url}/wp-login.php | Status Code: {response.status_code} | Scoring: {str(scoring)}")
+         if scoring > 1.5:
+             print("\nThe target is using WordPress!")
+         else:
+             if scoring < 
+         print(f"\nThe target is using WordPress! | Scoring: {str(scoring)}")
      elif "Joomla" in response.text:
-         print("\nThe target is using Joomla!")
+         scoring += 1
+         print(f"\nThe target is using Joomla! | Scoring: {str(scoring)}")
      elif "Drupal" in response.text:
-         print("\nThe target is using Drupal!")
+         scoring += 2
+         print(f"\nThe target is using Drupal! | Scoring: {str(scoring)}")
      else:
-         print("\nThe target is not using WordPress, Joomla or Drupal.")
+         print(f"\nThe target is not using WordPress, Joomla or Drupal | Scoring: {str(scoring)}")     
