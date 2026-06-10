@@ -93,7 +93,13 @@ elif args.information and args.URL:
          "https://www.roblox.com/data/",
          "https://www.instagram.com/client_error/",
          "https://www.instagram.com/qp/batch_fetch_web/",
-         "https://www.instagram.com/api/v1/web/accounts/login/ajax/"
+         "https://www.instagram.com/api/v1/web/accounts/login/ajax/",
+         "https://www.instagram.com/api/v1/web/accounts/login/ajax/attempt/",
+         "https://www.facebook.com/file_download.php/",
+         "https://m.facebook.com/ajax/bootloader-endpoint/",
+         "https://www.facebook.com/api/graphql/",
+         
+         
      ]
      options_resp = requests.options(url, headers=headers, allow_redirects=True, timeout=10)
      print(f"\nHTTP Methods: {options_resp.headers.get('Allow')}")
