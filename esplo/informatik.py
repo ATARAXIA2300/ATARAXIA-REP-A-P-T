@@ -78,8 +78,12 @@ elif args.domain and args.wordlist_domain:
                          except dns.resolver.NoNameservers:
                              print(f"\nNo nameservers for {subdomain}")
 elif args.information and args.URL:
+     blacklist_urls = ["https://api."]
      url = args.URL
      print(f"\nStarting information gathering on {url}...")
+     if "api" in url:
+         print(f"\nThe target: {url}, is an API, so i can't scan it because it will be an attack or massive scansion to a API.")
+         blacklist_urls.append(url)
      time.sleep(2)
      regex_emails = r"(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?![A-Za-z0-9.-])"
      regex_html_title = r"<title>(.*?)</title>"
@@ -89,18 +93,6 @@ elif args.information and args.URL:
          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
          "Content-Type": "application/x-www-form-urlencoded"
      }
-     blacklist_urls = [
-         "https://www.roblox.com/data/",
-         "https://www.instagram.com/client_error/",
-         "https://www.instagram.com/qp/batch_fetch_web/",
-         "https://www.instagram.com/api/v1/web/accounts/login/ajax/",
-         "https://www.instagram.com/api/v1/web/accounts/login/ajax/attempt/",
-         "https://www.facebook.com/file_download.php/",
-         "https://m.facebook.com/ajax/bootloader-endpoint/",
-         "https://www.facebook.com/api/graphql/",
-         
-         
-     ]
      options_resp = requests.options(url, headers=headers, allow_redirects=True, timeout=10)
      print(f"\nHTTP Methods: {options_resp.headers.get('Allow')}")
      response = requests.get(url, headers=headers, allow_redirects=True, timeout=10)
