@@ -7,6 +7,7 @@ import time
 from faker import Faker
 import re
 import whois
+import time
 
 fake = Faker()
 user_agent = fake.user_agent()
@@ -82,22 +83,33 @@ elif args.information and args.URL:
      time.sleep(2)
      regex_emails = r"(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?![A-Za-z0-9.-])"
      regex_html_title = r"<title>(.*?)</title>"
+     regex_hashes = r"(?<![a-zA-Z0-9])[a-fA-F0-9]{32}(?![a-zA-Z0-9])|(?<![a-zA-Z0-9])[a-fA-F0-9]{40}(?![a-zA-Z0-9])|(?<![a-zA-Z0-9])[a-fA-F0-9]{64}(?![a-zA-Z0-9])|(?<![a-zA-Z0-9])[a-fA-F0-9]{128}(?![a-zA-Z0-9])"
      headers = {
          "User-Agent": user_agent,
          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
          "Content-Type": "application/x-www-form-urlencoded"
      }
+     blacklist_urls = [
+         "https://www.roblox.com/data/",
+         "https://www.instagram.com/client_error/",
+         "https://www.instagram.com/qp/batch_fetch_web/",
+         "https://www.instagram.com/api/v1/web/accounts/login/ajax/"
+     ]
      options_resp = requests.options(url, headers=headers, allow_redirects=True, timeout=10)
      print(f"\nHTTP Methods: {options_resp.headers.get('Allow')}")
      response = requests.get(url, headers=headers, allow_redirects=True, timeout=10)
      redirects = [response.url for response in response.history]
      final_url = response.url
-     w = whois.whois(url)
-     print(f"\nWHOIS: {w}")
+     try:
+      w = whois.whois(url)
+      print(f"\nWHOIS: {w}")
+     except whois.exceptions.WhoisDomainNotFoundError:
+         print("\nWHOIS: Domain not found!")
      print(f"\nServer: {response.headers.get('Server')}")
      print(f"\nX-Powered-By: {response.headers.get('X-Powered-By')}")
      print(f"\nSet-Cookie: {response.headers.get('Set-Cookie')}")
      print(f"\nEmails: {re.findall(regex_emails, response.text)}")
+     print(f"\nHashes / CMS Fingerprints: {re.findall(regex_hashes, response.text)}")       
      print(f"\nTitle: {re.findall(regex_html_title, response.text)}")
      print(f"\nStatus Code: {response.status_code}")
      print(f"\nWebsite Headers: {response.headers}")
@@ -106,36 +118,113 @@ elif args.information and args.URL:
      print(f"\nHTTP Version: {response.raw.version}")
      print(f"\nHTTP Reason: {response.status_code} {response.reason}")
      print(f"\nRedirects: {redirects} --> Final URL: {final_url}")
+     if "cloudflare" in response.headers or "cf-ray" in response.headers:
+         print("\nCDN Detected: Cloudflare!")
+     elif "AkamaiGHost" in response.headers or "X-Cache-Remote" in response.headers:
+         print("\nCDN Detected: Akamai!")
+     elif "fastly" in response.headers or "X-Served-By" in response.headers:
+         print("\nCDN Detected: Fastly!")
+     else:
+         print("\nNo CDN Detected!")
      if "<!DOCTYPE html>" in response.text:
          print("\nThe target is using HTML5")
      elif """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" ...>""" in response.text:
-          print("\nThe target is using XHTML")
+          print("\nThe target is using XHTML 1.0 (Today is deprecated)")
      elif """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">""" in response.text:
          print("\nThe target is using HTML 4.01 (Today is deprecated)")
-     elif """<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN""" in response.text:
-         print("\nThe target is using HTML 4.01 Transitional (Today is deprecated)")
+     elif """<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">""" in response.text:
+         print("\nThe target is using HTML 2.0 (Today is deprecated)")
+     elif """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">""" in response.text:
+         print("\nThe target is using XHTML 1.1 (Today is deprecated)")
      else:
          print("\nI couldn't detect the html version of the target.")
+     
 
      scoring = 0
-     
-     if "wp-content" in response.text or "wp-admin" in response.text:
-         scoring += 0.7
-         response = requests.get(url + "/wp-login.php", headers=headers, allow_redirects=True, timeout=10)
-         if response.status_code in (200, 403, 401):
-         scoring += 1
-         print(f"\nThe target has a WordPress login page! | URL: {url}/wp-login.php | Status Code: {response.status_code} | Scoring: {str(scoring)}")
-         if scoring > 1.5:
-             print("\nThe target is using WordPress!")
+
+     if "wixstatic" in url or "wixsite" in url or """<meta name="generator" content="Wix.com Website Builder">""" in response.text:
+         scoring += 1.5
+         if scoring == 1.5:
+             print(f"\nThe target is using Wix! | Scoring: {str(scoring)}")
          else:
-             if scoring < 
-         print(f"\nThe target is using WordPress! | Scoring: {str(scoring)}")
+             if scoring == 0:
+                 print(f"\nThe target is not using Wix! | Scoring: {str(scoring)}")
+                 
+     
+     elif "wp-content" in response.text or "wp-admin" in response.text:
+         scoring += 0.7
+         print(f"\nThe target has the keywords: wp-content / wp-admin in the HTML structure! | Scoring: {str(scoring)}")
+         response = requests.get(url + "/wp-json", headers=headers, allow_redirects=True, timeout=10)
+         if response.status_code in (200, 403, 401, 426):
+          scoring += 1
+          print(f"\nThe target has a WordPress has a wp-json page! | URL: {url}/wp-admin | Status Code: {response.status_code} | Scoring: {str(scoring)}")
+         if scoring > 1.5 or scoring > 1.6:
+             print(f"\nThe target is using WordPress! | Scoring: {str(scoring)}")
+         elif scoring == 0.7 or scoring == 1:
+             print(f"\nTarget may be using WordPress, but is not sure yet | Scoring: {str(scoring)}")
+         else:
+             if scoring == 0:
+                 print(f"\nThe target is not using WordPress! | Scoring: {str(scoring)}")
+             
      elif "Joomla" in response.text:
-         scoring += 1
-         print(f"\nThe target is using Joomla! | Scoring: {str(scoring)}")
+         scoring += 0.5
+         print(f"\nThe target has the keyword: Joomla in the HTML structure! | Scoring: {str(scoring)}")
+         response = requests.get(url + "/administrator", headers=headers, allow_redirects=True, timeout=10)
+         if response.status_code in (200, 403, 401, 426, 301, 302):
+          scoring += 1.5
+          print(f"\nThe target has a Joomla login page! | URL: {url}/administrator | Status Code: {response.status_code} | Scoring: {str(scoring)}")
+          print(f"\nThe target is using Joomla! | Scoring: {str(scoring)}")
+         else:
+             if response.status_code in (404, 410):
+                 scoring -= 0.2
+                 print(f"\nThe target has not a Joomla login page! | URL: {url}/administrator | Status Code: {response.status_code} | Scoring: {str(scoring)}")
+             else:
+                      if scoring == 0.3:
+                       print(f"\nTarget may be using Joomla, but is not sure yet | Scoring: {str(scoring)}")
+                      else:
+                          if scoring == 0:
+                              print(f"\nThe target is not using Joomla! | Scoring: {str(scoring)}")
+         
      elif "Drupal" in response.text:
-         scoring += 2
-         print(f"\nThe target is using Drupal! | Scoring: {str(scoring)}")
+         scoring += 0.4
+         print(f"\nThe target has the keyword: Drupal in the HTML structure! | Scoring: {str(scoring)}")
+         response = requests.get(url + "/core/", headers=headers, allow_redirects=True, timeout=10)
+         if response.status_code in (200, 403, 401):
+          scoring += 1.2
+          if scoring == 1.6:
+           print(f"\nThe target has a Drupal directory core! | URL: {url}/core/ | Status Code: {response.status_code} | Scoring: {str(scoring)}")
+           print(f"\nThe target is using Drupal! | Scoring: {str(scoring)}")
+          elif scoring == 0.4:
+              print(f"\nTarget may be using Drupal, but is not sure yet | Scoring: {str(scoring)}")
+          else:
+              if scoring == 0:
+                  print(f"\nThe target is not using Drupal! | Scoring: {str(scoring)}")
      else:
-         print(f"\nThe target is not using WordPress, Joomla or Drupal | Scoring: {str(scoring)}")     
+         if scoring == 0:
+          print(f"\nThe target is not using WordPress, Joomla or Drupal | Scoring: {str(scoring)}")
+     previous_hash = set()
+     while True:
+         response = requests.get(url, headers=headers, allow_redirects=True, timeout=10)
+         current_hash = set(re.findall(regex_hashes, response.text))
+         if previous_hash and current_hash != previous_hash:
+              print(f"\nHTML structure has changed! (probably anti-scraping / anti-bot detected!) | NEW HASHES: {current_hash - previous_hash} | OLD HASHES: {previous_hash - current_hash}")
+              previous_hash = current_hash
+              user_input = input("\nDo you want to continue? (y/n): ")
+              if user_input.lower() == "n":
+                  print("\nOk, exiting...")
+                  break
+              elif user_input.lower() == "y":
+                  print("\nOk, continuing...")
+                  continue
+         else:
+             print("\nOk, No HTML structure changes detected!")
+             previous_hash = current_hash
+             user_input = input("\nDo you want to continue? (y/n): ")
+             if user_input.lower() == "n":
+                   print("\nOk, exiting...")
+                   break
+             elif user_input.lower() == "y":
+                   print("\nOk, continuing...")
+                   continue
+         time.sleep(25)

@@ -1,4 +1,6 @@
-# Progetto Python
+# Progetto 
+
+
 
 Progetto Python vuoto pronto all'uso con Python 3.12, pip e workflow configurato.
 
